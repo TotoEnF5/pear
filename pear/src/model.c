@@ -145,13 +145,12 @@ material_t model_create_material(model_t* self, cgltf_material* gltf_material) {
     material_t material;
     strncpy(material.name, gltf_material->name, MATERIAL_NAME_LENGTH);
 
-    cgltf_texture* diffuse_texture = gltf_material->pbr_metallic_roughness.metallic_roughness_texture.texture; 
+    cgltf_texture* diffuse_texture = gltf_material->pbr_metallic_roughness.base_color_texture.texture; 
     if (diffuse_texture != NULL) {
         i32 width, height, num_channels;
         u8* image = NULL;
 
-        stbi_set_flip_vertically_on_load(true);
-        if (diffuse_texture->image->buffer_view  != NULL) {
+        if (diffuse_texture->image->buffer_view != NULL) {
             const u8* image_data = cgltf_buffer_view_data(diffuse_texture->image->buffer_view);
             image = stbi_load_from_memory(image_data, diffuse_texture->image->buffer_view->size, &width, &height, &num_channels, 4);
         }
