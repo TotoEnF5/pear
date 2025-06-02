@@ -1,0 +1,12 @@
+[submodule "3rdparty/cglm"]
+	path = 3rdparty/cglm
+	url = https://github.com/recp/cglm.git
+[submodule "3rdparty/glfw"]
+	path = 3rdparty/glfw
+	url = https://github.com/glfw/glfw.git
+[submodule "3rdparty/sokol"]
+	path = 3rdparty/sokol
+	url = https://github.com/floooh/sokol.git
+[submodule "3rdparty/sokol-tools-bin"]
+	path = 3rdparty/sokol-tools-bin
+	url = https://github.com/floooh/sokol-tools-bin.git

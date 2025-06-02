@@ -1,0 +1,9 @@
+.cache/
+bin/
+obj/
+assets/
+pear/include/shaders/
+
+compile_commands.json
+**.make
+Makefile
