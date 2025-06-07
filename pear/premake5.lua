@@ -20,6 +20,7 @@ project "pear"
         "../3rdparty/cglm/include",
         "../3rdparty/stb",
         "../3rdparty/cgltf",
+        "../3rdparty/lua",
     }
 
     prebuildcommands {
