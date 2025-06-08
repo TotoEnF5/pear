@@ -1,9 +1,8 @@
 #ifndef APP_H_
 #define APP_H_
 
-#include <window.h>
-#include <renderer.h>
-#include <types.h>
+#include "window.h"
+#include "renderer.h"
 
 typedef struct app_t {
     window_t* window;

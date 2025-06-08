@@ -1,7 +1,7 @@
 #ifndef WINDOW_H_
 #define WINDOW_H_
 
-#include <types.h>
+#include "types.h"
 
 typedef struct window_t window_t;
 

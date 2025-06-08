@@ -1,7 +1,7 @@
-#include <renderer.h>
-#include <model.h>
-#include <alloc.h>
-#include <log.h>
+#include "renderer.h"
+#include "model.h"
+#include "alloc.h"
+#include "log.h"
 
 #define SOKOL_IMPL
 #define SOKOL_GLCORE

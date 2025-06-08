@@ -1,9 +1,9 @@
 #ifndef MODEL_H_
 #define MODEL_H_
 
-#include <array.h>
-#include <types.h>
-#include <sokol_gfx.h>
+#include "array.h"
+#include "types.h"
+#include "sokol_gfx.h"
 
 #define MODEL_DIRECTORY_LENGTH 256
 #define MESH_NAME_LENGTH 256

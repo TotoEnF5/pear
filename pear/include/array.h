@@ -1,9 +1,9 @@
 #ifndef ARRAY_H_
 #define ARRAY_H_
 
-#include <types.h>
-#include <alloc.h>
-#include <log.h>
+#include "types.h"
+#include "alloc.h"
+#include "log.h"
 #include <string.h>
 
 #define ARRAY_DECL_NAMED(type, array_type, prefix) \

@@ -1,10 +1,10 @@
 #ifndef TYPES_H_
 #define TYPES_H_
 
+#include "cglm/cglm.h"
 #include <stdint.h>
 #include <stdbool.h>
 #include <stddef.h>
-#include <cglm/cglm.h>
 
 typedef int8_t i8;
 typedef int16_t i16;

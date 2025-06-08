@@ -1,6 +1,6 @@
+#include "app.h"
 #include "renderer.h"
 #include "window.h"
-#include <app.h>
 
 static app_t app = { 0 };
 

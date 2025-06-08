@@ -1,11 +1,10 @@
-#include <model.h>
-#include <stdint.h>
-#include <types.h>
-#include <alloc.h>
-#include <log.h>
-#include <sokol_gfx.h>
-#include <cgltf.h>
-#include <stb_image.h>
+#include "model.h"
+#include "types.h"
+#include "alloc.h"
+#include "log.h"
+#include "sokol_gfx.h"
+#include "cgltf.h"
+#include "stb_image.h"
 
 #ifdef PEAR_LINUX
 #include <unistd.h>

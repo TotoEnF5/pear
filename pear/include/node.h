@@ -1,8 +1,8 @@
 #ifndef NODE_H_
 #define NODE_H_
 
-#include <array.h>
-#include <types.h>
+#include "array.h"
+#include "types.h"
 
 typedef struct world_t world_t;
 typedef struct node_t node_t;
