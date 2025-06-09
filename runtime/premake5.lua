@@ -22,7 +22,7 @@ project "runtime"
         "pear",
         "m",
         "glfw",
-        "lua",
+        "lual",
         "GL",
     }
 

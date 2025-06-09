@@ -1,4 +1,4 @@
-project "lua"
+project "lual"
     kind "StaticLib"
     language "C"
     targetdir(bin_directory)
