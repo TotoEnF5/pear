@@ -58,10 +58,23 @@
         return self->buffer[index]; \
     } \
 \
-    inline static void prefix##_remove(array_type* self, u32 index) { \
+    inline static void prefix##_remove_index(array_type* self, u32 index) { \
         PEAR_ASSERT(index >= 0 && index < self->length, "out of bounds index removal!"); \
         memmove(&self->buffer[index], &self->buffer[index + 1], self->length - index); \
         self->length--; \
+    } \
+\
+    inline static i32 prefix##_get_index(array_type* self, type element) { \
+        for (i32 i = 0; i < self->length; i++) { \
+            if (memcmp(&element, &(self)->buffer[i], sizeof(type)) == 0) { \
+                return i; \
+            } \
+        } \
+        return -1; \
+    } \
+\
+    inline static void prefix##_remove(array_type* self, type element) { \
+        prefix##_remove_index(self, prefix##_get_index(self, element)); \
     }
 
 #define ARRAY_DECL(type, prefix) ARRAY_DECL_NAMED(type, prefix##_array_t, prefix##_array)
