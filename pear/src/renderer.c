@@ -1,4 +1,6 @@
 #include "renderer.h"
+#include "cglm/affine.h"
+#include "cglm/vec3.h"
 #include "event.h"
 #include "array.h"
 #include "node.h"
@@ -7,8 +9,10 @@
 #include "nodes/pos.h"
 #include "nodes/rotation.h"
 #include "nodes/scale.h"
+#include "nodes/camera.h"
 #include "alloc.h"
 #include "log.h"
+#include <math.h>
 
 #define SOKOL_IMPL
 #define SOKOL_GLCORE
@@ -29,7 +33,7 @@ typedef struct renderer_t {
 
 static void renderer_build_view_proj(renderer_t* self, u32 width, u32 height) {
     glm_perspective(glm_rad(45.0f), (f32)width / (f32)height, 0.1f, 100.0f, self->projection);
-    glm_lookat((vec3){ 0.0f, 1.5f, 6.0f }, (vec3){ 0.0f, 0.0f, 0.0f }, (vec3){ 0.0f, 1.0f, 0.0f }, self->view);
+    glm_lookat((vec3){ 0.0f, 0.0f, 0.0f }, (vec3){ 0.0f, 0.0f, 1.0f }, (vec3){ 0.0f, 1.0f, 0.0f }, self->view);
 }
 
 static void renderer_on_event(event_type_t type, void* event, void* user_data) {
@@ -114,6 +118,35 @@ void renderer_render_mesh(renderer_t* self, mesh_t* mesh, mat4 transform) {
     sg_draw(0, mesh->num_indices, 1);
 }
 
+void renderer_handle_camera(renderer_t* self, mat4 transform) {
+    vec4 translation;
+    mat4 rotation;
+    vec3 angles;
+    vec3 scale;
+    glm_decompose(transform, translation, rotation, scale);
+    glm_euler_angles(rotation, angles);
+
+    vec3 world_up = { 0.0f, 1.0f, 0.0f };
+    vec3 front;
+    vec3 right;
+    vec3 up;
+
+    front[0] = cos(angles[1]) * cos(angles[0]);
+    front[1] = sin(angles[0]);
+    front[2] = sin(angles[1]) * cos(angles[0]);
+    glm_normalize(front);
+
+    glm_cross(front, world_up, right);
+    glm_normalize(right);
+
+    glm_cross(right, front, up);
+    glm_normalize(up);
+
+    vec3 target;
+    glm_vec3_add(translation, front, target);
+    glm_lookat(translation, target, up, self->view);
+}
+
 void renderer_handle_node(renderer_t* self, node_t* node, mat4 transform) {
     switch (node->type) {
     case NODE_TYPE_POS: {
@@ -138,6 +171,9 @@ void renderer_handle_node(renderer_t* self, node_t* node, mat4 transform) {
         break;
     case NODE_TYPE_MESH:
         renderer_render_mesh(self, (mesh_t*)node, transform);
+        break;
+    case NODE_TYPE_CAMERA:
+        renderer_handle_camera(self, transform);
         break;
     default:
         break;

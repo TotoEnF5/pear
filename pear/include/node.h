@@ -36,6 +36,7 @@ typedef enum node_type_t {
     NODE_TYPE_SCALE,
     NODE_TYPE_MODEL,
     NODE_TYPE_MESH,
+    NODE_TYPE_CAMERA,
     NODE_TYPE_SCRIPT,
 } node_type_t;
 
