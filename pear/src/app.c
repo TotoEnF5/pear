@@ -15,11 +15,15 @@ void app_delete() {
     window_delete(app.window);
 }
 
+void app_set_root(node_t *root) {
+    app.root = root;
+}
+
 void app_run() {
     app.is_running = true;
     while (app.is_running) {
         window_update(app.window);
-        renderer_render(app.renderer);
+        renderer_render_node(app.renderer, app.root);
         window_swap_buffers(app.window);
 
         app.is_running = !window_should_close(app.window);

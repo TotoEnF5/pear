@@ -1,34 +1,26 @@
-#include "model.h"
-#include "types.h"
-#include "alloc.h"
+#include "nodes/model.h"
+#include "nodes/mesh.h"
 #include "log.h"
 #include "sokol_gfx.h"
 #include "cgltf.h"
 #include "stb_image.h"
 
-#ifdef PEAR_LINUX
-#include <unistd.h>
-#include <sys/types.h>
-#else
-#error "only linux is supported!"
-#endif
-
-void model_load_indices(mesh_t* mesh, cgltf_primitive primitive) {
-    u32 num_indices = cgltf_accessor_unpack_indices(primitive.indices, NULL, 0, 0);
-    u32* indices = PEAR_ALLOC_N(u32, num_indices);
-    u32 ret = cgltf_accessor_unpack_indices(primitive.indices, indices, sizeof(u32), num_indices);
+sg_buffer model_load_indices(cgltf_primitive primitive, u32* num_indices) {
+    *num_indices = cgltf_accessor_unpack_indices(primitive.indices, NULL, 0, 0);
+    u32* indices = PEAR_ALLOC_N(u32, *num_indices);
+    u32 ret = cgltf_accessor_unpack_indices(primitive.indices, indices, sizeof(u32), *num_indices);
     PEAR_ASSERT(ret != 0, "failed to unpack indices!");
 
-    mesh->index_buffer = sg_make_buffer(&(sg_buffer_desc){
+    sg_buffer index_buffer = sg_make_buffer(&(sg_buffer_desc){
         .usage.index_buffer = true,
         .data = {
             .ptr = indices,
-            .size = num_indices * sizeof(u32)
+            .size = *num_indices * sizeof(u32)
         }
     });
-    mesh->num_indices = num_indices;
-
     pear_free(indices);
+
+    return index_buffer;
 }
 
 void model_build_buffer(f32** dest, f32* positions, f32* tex_coords, f32* normals, u32 positions_size, u32 tex_coords_size, u32 normals_size) {
@@ -99,7 +91,7 @@ u32 model_load_normals(f32** normals, cgltf_attribute attribute) {
     return num_data;
 }
 
-void model_load_attributes(mesh_t* mesh, cgltf_primitive primitive, mat4 matrix) {
+sg_buffer model_load_attributes(cgltf_primitive primitive, mat4 matrix) {
     f32* positions = NULL;
     f32* tex_coords = NULL;
     f32* normals = NULL;
@@ -128,7 +120,7 @@ void model_load_attributes(mesh_t* mesh, cgltf_primitive primitive, mat4 matrix)
     model_build_buffer(&buffer, positions, tex_coords, normals, positions_size, tex_coords_size, normals_size);
 
     u32 num_data = positions_size + tex_coords_size + normals_size;
-    mesh->vertex_buffer = sg_make_buffer(&(sg_buffer_desc){
+    sg_buffer vertex_buffer = sg_make_buffer(&(sg_buffer_desc){
         .data = {
             .ptr = buffer,
             .size = num_data * sizeof(f32)
@@ -138,6 +130,8 @@ void model_load_attributes(mesh_t* mesh, cgltf_primitive primitive, mat4 matrix)
     pear_free(positions);
     pear_free(tex_coords);
     pear_free(normals);
+
+    return vertex_buffer;
 }
 
 material_t model_create_material(model_t* self, cgltf_material* gltf_material) {
@@ -189,36 +183,38 @@ material_t model_create_material(model_t* self, cgltf_material* gltf_material) {
     return material;
 }
 
-void model_load_material(model_t* self, mesh_t* mesh, cgltf_primitive primitive) {
+u32 model_load_material(model_t* self, cgltf_primitive primitive) {
     cgltf_material* gltf_material = primitive.material;
 
     u32 i;
     material_t material;
     ARRAY_FOREACH(self->materials, material, i) {
         if (strcmp(material.name, gltf_material->name) == 0) {
-            mesh->material_index = i;
-            return;
+            return i;
         }
     }
 
-    mesh->material_index = self->materials->length;
+    u32 material_index = material_index = self->materials->length;
     material_array_add(self->materials, model_create_material(self, gltf_material));
+    return material_index;
 }
 
 void model_handle_mesh(model_t* self, cgltf_mesh* gltf_mesh, mat4 matrix) {
-    mesh_t mesh;
-    strncpy(mesh.name, gltf_mesh->name, MESH_NAME_LENGTH);
+    sg_buffer vertex_buffer;
+    sg_buffer index_buffer;
+    u32 num_indices;
+    u32 material_index;
 
     for (u32 i = 0; i < gltf_mesh->primitives_count; i++) {
         cgltf_primitive primitive = gltf_mesh->primitives[i];
         PEAR_ASSERT(primitive.type == cgltf_primitive_type_triangles, "unsupported primitive type %d!", primitive.type);
 
-        model_load_indices(&mesh, primitive);
-        model_load_attributes(&mesh, primitive, matrix);
-        model_load_material(self, &mesh, primitive);
+        index_buffer = model_load_indices(primitive, &num_indices);
+        vertex_buffer = model_load_attributes(primitive, matrix);
+        material_index = model_load_material(self, primitive);
     }
 
-    mesh_array_add(self->meshes, mesh);
+    node_child((node_t*)self, mesh_t, gltf_mesh->name, vertex_buffer, index_buffer, num_indices, material_index);
 }
 
 void model_handle_node(model_t* self, cgltf_node* node) {
@@ -232,11 +228,11 @@ void model_handle_node(model_t* self, cgltf_node* node) {
     }
 }
 
-model_t* model_load(const char* filename) {
-    model_t* self = PEAR_ALLOC(model_t);
-    self->meshes = mesh_array_new();
+NODE_NEW_FUNC_SIGNATURE(model_t, const char* filename) {
+    model_t* self = node_new(model_t, parent, NODE_TYPE_MODEL, name);
     self->materials = material_array_new();
 
+    // load the model with cgltf
     cgltf_options options = { 0 };
     cgltf_data* data = NULL;
 
@@ -246,6 +242,7 @@ model_t* model_load(const char* filename) {
     result = cgltf_load_buffers(&options, data, filename);
     PEAR_ASSERT(result == cgltf_result_success, "failed to load buffers for %s!", filename);
 
+    // find the directory of the model file (useful when loading textures if they are not embedded in the glb)
     char* last_slash = strrchr(filename, '/');
     if (last_slash == NULL) {
         self->directory[0] = '\0';
@@ -257,6 +254,7 @@ model_t* model_load(const char* filename) {
         self->directory[directory_index] = '\0';
     }
 
+    // begin creating the meshes
     for (u32 i = 0; i < data->scenes_count; i++) {
         cgltf_scene scene = data->scenes[i];
         for (u32 j = 0; j < scene.nodes_count; j++) {
@@ -267,8 +265,4 @@ model_t* model_load(const char* filename) {
     cgltf_free(data);
 
     return self;
-}
-
-void model_delete(model_t* self) {
-    pear_free(self);
 }

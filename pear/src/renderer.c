@@ -1,5 +1,11 @@
 #include "renderer.h"
-#include "model.h"
+#include "array.h"
+#include "node.h"
+#include "nodes/model.h"
+#include "nodes/mesh.h"
+#include "nodes/pos.h"
+#include "nodes/rotation.h"
+#include "nodes/scale.h"
 #include "alloc.h"
 #include "log.h"
 
@@ -11,9 +17,11 @@
 #include <shaders/shader.h>
 
 typedef struct renderer_t {
-    model_t* model;
     sg_shader shader;
     sg_pipeline pipeline;
+    model_t* current_model;
+
+    mat4 view_proj;
 } renderer_t;
 
 renderer_t* renderer_new(void) {
@@ -30,8 +38,12 @@ renderer_t* renderer_new(void) {
     PEAR_ASSERT(sg_isvalid(), "failed to initialize sokol!");
 
     renderer_t* self = PEAR_ALLOC(renderer_t);
-
-    self->model = model_load("assets/Avocado.glb");
+    mat4 projection = GLM_MAT4_IDENTITY_INIT;
+    mat4 view = GLM_MAT4_IDENTITY_INIT;
+    mat4 view_proj = GLM_MAT4_IDENTITY_INIT;
+    glm_perspective(glm_rad(45.0f), 800.0f / 600.0f, 0.1f, 100.0f, projection);
+    glm_lookat((vec3){ 0.0f, 1.5f, 6.0f }, (vec3){ 0.0f, 0.0f, 0.0f }, (vec3){ 0.0f, 1.0f, 0.0f }, view);
+    glm_mat4_mul(projection, view, self->view_proj);
 
     self->shader = sg_make_shader(shader_shader_desc(sg_query_backend()));
 
@@ -60,25 +72,65 @@ void renderer_delete(renderer_t* self) {
     pear_free(self);
 }
 
-void renderer_render(renderer_t *self) {
-    mat4 projection = GLM_MAT4_IDENTITY_INIT;
-    mat4 view = GLM_MAT4_IDENTITY_INIT;
-    mat4 view_proj = GLM_MAT4_IDENTITY_INIT;
-    glm_perspective(glm_rad(45.0f), 800.0f / 600.0f, 0.1f, 100.0f, projection);
-    glm_lookat((vec3){ 0.0f, 1.5f, 6.0f }, (vec3){ 0.0f, 0.0f, 0.0f }, (vec3){ 0.0f, 1.0f, 0.0f }, view);
-    glm_mat4_mul(projection, view, view_proj);
-
-    static float rotation = 0.0f;
-    mat4 model = GLM_MAT4_IDENTITY_INIT;
-    glm_scale(model, (vec3){ 50.0f, 50.0f, 50.0f });
-    glm_rotate(model, rotation, (vec3){ 0.0f, 1.0f, 0.0f });
-    rotation += 0.01f;
+void renderer_render_mesh(renderer_t* self, mesh_t* mesh, mat4 transform) {
+    material_t material = material_array_get(self->current_model->materials, mesh->material_index);
 
     mat4 mvp = GLM_MAT4_IDENTITY_INIT;
-    glm_mat4_mul(view_proj, model, mvp);
-
+    glm_mat4_mul(self->view_proj, transform, mvp);
     vs_uniforms_t uniforms;
     glm_mat4_copy(mvp, (vec4*)uniforms.u_mvp);
+    sg_apply_uniforms(UB_vs_uniforms, &SG_RANGE(uniforms));
+
+    sg_apply_bindings(&(sg_bindings){
+        .vertex_buffers[0] = mesh->vertex_buffer,
+        .index_buffer = mesh->index_buffer,
+        .images[IMG_u_texture] = material.diffuse_texture.image,
+        .samplers[SMP_u_sampler] = material.diffuse_texture.sampler
+    });
+    sg_draw(0, mesh->num_indices, 1);
+}
+
+void renderer_handle_node(renderer_t* self, node_t* node, mat4 transform) {
+    switch (node->type) {
+    case NODE_TYPE_POS: {
+        pos_t* pos = (pos_t*)node;
+        glm_translate(transform, pos->pos);
+        break;
+    }
+    case NODE_TYPE_ROTATION: {
+        rotation_t* rotation = (rotation_t*)node;
+        glm_rotate(transform, rotation->rotation[0], (vec3){ 1.0f, 0.0f, 0.0f });
+        glm_rotate(transform, rotation->rotation[1], (vec3){ 0.0f, 1.0f, 0.0f });
+        glm_rotate(transform, rotation->rotation[2], (vec3){ 1.0f, 0.0f, 1.0f });
+        break;
+    }
+    case NODE_TYPE_SCALE: {
+        scale_t* scale = (scale_t*)node;
+        glm_scale(transform, scale->scale);
+        break;
+    }
+    case NODE_TYPE_MODEL:
+        self->current_model = (model_t*)node;
+        break;
+    case NODE_TYPE_MESH:
+        renderer_render_mesh(self, (mesh_t*)node, transform);
+        break;
+    default:
+        break;
+    }
+
+    mat4 local_transform;
+    glm_mat4_copy(transform, local_transform);
+
+    node_t* child;
+    u32 i;
+    ARRAY_FOREACH(node->children, child, i) {
+        renderer_handle_node(self, child, local_transform);
+    }
+}
+
+void renderer_render_node(renderer_t* self, node_t* node) {
+    self->current_model = NULL;
 
     sg_begin_pass(&(sg_pass){
         .swapchain = {
@@ -91,21 +143,9 @@ void renderer_render(renderer_t *self) {
         }
     });
     sg_apply_pipeline(self->pipeline);
-    sg_apply_uniforms(UB_vs_uniforms, &SG_RANGE(uniforms));
 
-    u32 i;
-    mesh_t mesh;
-    ARRAY_FOREACH(self->model->meshes, mesh, i) {
-        material_t material = material_array_get(self->model->materials, mesh.material_index);
-
-        sg_apply_bindings(&(sg_bindings){
-            .vertex_buffers[0] = mesh.vertex_buffer,
-            .index_buffer = mesh.index_buffer,
-            .images[IMG_u_texture] = material.diffuse_texture.image,
-            .samplers[SMP_u_sampler] = material.diffuse_texture.sampler
-        });
-        sg_draw(0, mesh.num_indices, 1);
-    }
+    mat4 transform = GLM_MAT4_IDENTITY_INIT;
+    renderer_handle_node(self, node, transform);
 
     sg_end_pass();
     sg_commit();
