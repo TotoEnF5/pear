@@ -23,16 +23,13 @@ typedef struct renderer_t {
     sg_swapchain swapchain;
     model_t* current_model;
 
-    mat4 view_proj;
+    mat4 projection;
+    mat4 view;
 } renderer_t;
 
 static void renderer_build_view_proj(renderer_t* self, u32 width, u32 height) {
-    mat4 projection = GLM_MAT4_IDENTITY_INIT;
-    mat4 view = GLM_MAT4_IDENTITY_INIT;
-    mat4 view_proj = GLM_MAT4_IDENTITY_INIT;
-    glm_perspective(glm_rad(45.0f), (f32)width / (f32)height, 0.1f, 100.0f, projection);
-    glm_lookat((vec3){ 0.0f, 1.5f, 6.0f }, (vec3){ 0.0f, 0.0f, 0.0f }, (vec3){ 0.0f, 1.0f, 0.0f }, view);
-    glm_mat4_mul(projection, view, self->view_proj);
+    glm_perspective(glm_rad(45.0f), (f32)width / (f32)height, 0.1f, 100.0f, self->projection);
+    glm_lookat((vec3){ 0.0f, 1.5f, 6.0f }, (vec3){ 0.0f, 0.0f, 0.0f }, (vec3){ 0.0f, 1.0f, 0.0f }, self->view);
 }
 
 static void renderer_on_event(event_type_t type, void* event, void* user_data) {
@@ -102,10 +99,10 @@ void renderer_delete(renderer_t* self) {
 void renderer_render_mesh(renderer_t* self, mesh_t* mesh, mat4 transform) {
     material_t material = material_array_get(self->current_model->materials, mesh->material_index);
 
-    mat4 mvp = GLM_MAT4_IDENTITY_INIT;
-    glm_mat4_mul(self->view_proj, transform, mvp);
     vs_uniforms_t uniforms;
-    glm_mat4_copy(mvp, (vec4*)uniforms.u_mvp);
+    glm_mat4_copy(self->projection, (vec4*)uniforms.u_projection);
+    glm_mat4_copy(self->view, (vec4*)uniforms.u_view);
+    glm_mat4_copy(transform, (vec4*)uniforms.u_model);
     sg_apply_uniforms(UB_vs_uniforms, &SG_RANGE(uniforms));
 
     sg_apply_bindings(&(sg_bindings){
@@ -126,9 +123,9 @@ void renderer_handle_node(renderer_t* self, node_t* node, mat4 transform) {
     }
     case NODE_TYPE_ROTATION: {
         rotation_t* rotation = (rotation_t*)node;
-        glm_rotate(transform, rotation->rotation[0], (vec3){ 1.0f, 0.0f, 0.0f });
-        glm_rotate(transform, rotation->rotation[1], (vec3){ 0.0f, 1.0f, 0.0f });
-        glm_rotate(transform, rotation->rotation[2], (vec3){ 1.0f, 0.0f, 1.0f });
+        mat4 rotation_matrix;
+        glm_euler(rotation->rotation, rotation_matrix);
+        glm_mat4_mul(transform, rotation_matrix, transform);
         break;
     }
     case NODE_TYPE_SCALE: {

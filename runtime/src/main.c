@@ -11,7 +11,7 @@
 
 void f(script_t* self, f64 dt) {
     rotation_t* rotation = (rotation_t*)node_get_sibling_by_name((node_t*)self, "rotation");
-    rotation->rotation[2] += 10.0f * dt;
+    rotation->rotation[1] += 10.0f * dt;
 }
 
 void on_event(event_type_t type, void* e, void* user_data) {
@@ -28,15 +28,16 @@ int main(int argc, char* argv[]) {
 
     node_t* root = node_root("root");
 
-    container_t* container = node_child(root, container_t, "container");
-    pos_t* pos = node_child(container, pos_t, "pos", 2.0f, 0.0f, 0.0f);
-    scale_t* avocado_scale = node_child(container, scale_t, "avocado scale", 50.0f, 50.0f, 50.0f);
-    model_t* avocado = node_child(container, model_t, "avocado", "assets/Avocado.glb");
+    container_t* avocado_container = node_child(root, container_t, "avocado container");
+    node_child(avocado_container, pos_t, "avocado pos", 2.0f, 0.0f, 0.0f);
+    node_child(avocado_container, scale_t, "avocado scale", 50.0f, 50.0f, 50.0f);
+    node_child(avocado_container, model_t, "avocado", "assets/Avocado.glb");
 
-    node_child(root, script_t, "script", f);
-    node_child(root, rotation_t, "rotation", 0.0f, 0.0f, 0.0f);
-    scale_t* scale = node_child(root, scale_t, "scale", 5.0f, 5.0f, 5.0f);
-    model_t* model = node_child(root, model_t, "model", "assets/BarramundiFish.glb");
+    container_t* fish_container = node_child(root, container_t, "fish container");
+    node_child(fish_container, script_t, "script", f);
+    node_child(fish_container, rotation_t, "rotation", 0.0f, 0.0f, 0.0f);
+    node_child(fish_container, scale_t, "scale", 5.0f, 5.0f, 5.0f);
+    node_child(fish_container, model_t, "model", "assets/BarramundiFish.glb");
 
     app_set_root(root);
 
