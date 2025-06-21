@@ -1,3 +1,6 @@
+#ifndef KEYBOARD_H_
+#define KEYBOARD_H_
+
 // stolen from glfw3.h
 
 #define PEAR_KEY_UNKNOWN            -1
@@ -127,3 +130,5 @@
 #define PEAR_KEY_MENU               348
 
 #define PEAR_KEY_LAST               PEAR_KEY_MENU
+
+#endif
