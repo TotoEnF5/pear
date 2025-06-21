@@ -228,8 +228,20 @@ void model_handle_node(model_t* self, cgltf_node* node) {
     }
 }
 
+void model_delete(node_t* s) {
+    model_t* self = (model_t*)s;
+    
+    material_t material;
+    u32 i;
+    ARRAY_FOREACH(self->materials, material, i) {
+        sg_destroy_image(material.diffuse_texture.image);
+        sg_destroy_sampler(material.diffuse_texture.sampler);
+    }
+}
+
 NODE_NEW_FUNC_SIGNATURE(model_t, const char* filename) {
     model_t* self = node_new(model_t, parent, NODE_TYPE_MODEL, name);
+    self->delete_func = model_delete;
     self->materials = material_array_new();
 
     // load the model with cgltf

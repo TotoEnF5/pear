@@ -6,6 +6,10 @@
 /**
  * to declare a new node type:
  *
+ * 1. add the node type to the node_type_t enum
+ *
+ * 2. create a header file in nodes/ wit hthe following contents:
+ *
  * NODE_TYPE_DECL(
  *     node_type_name_t,
  *     int foo,
@@ -14,6 +18,14 @@
  * );
  *
  * NODE_NEW_FUNC_SIGNATURE(node_type_name_t, ...);
+ *
+ * 3. create a source file in src/nodes/ with the following contents:
+ *
+ * NODE_NEW_FUNC_SIGNATURE(node_type_name_t, ...) {
+ *     node_type_name_t* self = node_new(parent, node_type_name_t, name, ...);
+ *     // do stuff
+ *     return self;
+ * }
  */
 
 typedef enum node_type_t {
@@ -34,7 +46,8 @@ ARRAY_DECL(node_t*, node);
     node_type_t type; \
     node_t* parent; \
     node_array_t* children; \
-    char name[NODE_NAME_LENGTH]
+    char name[NODE_NAME_LENGTH]; \
+    void(*delete_func)(node_t* self)
 
 typedef struct node_t {
     NODE_STUFF();

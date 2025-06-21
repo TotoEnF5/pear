@@ -26,6 +26,4 @@ NODE_TYPE_DECL(
 
 NODE_NEW_FUNC_SIGNATURE(model_t, const char* filename);
 
-
-
 #endif

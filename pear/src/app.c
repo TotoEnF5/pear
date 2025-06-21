@@ -11,6 +11,7 @@ void app_init() {
 }
 
 void app_delete() {
+    node_delete(app.root);
     renderer_delete(app.renderer);
     window_delete(app.window);
 }

@@ -22,7 +22,5 @@ int main(int argc, char* argv[]) {
 
     app_run();
 
-    node_delete(root);
-
     return 0;
 }
