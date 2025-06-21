@@ -1,16 +1,27 @@
 #include "app.h"
 #include "renderer.h"
 #include "window.h"
+#include "event.h"
 
 #define SOKOL_TIME_IMPL
 #include "sokol_time.h"
 
 static app_t app = { 0 };
 
+static void app_on_event(event_type_t type, void* event, void* user_data) {
+    if (type == EVENT_TYPE_QUIT) {
+        app.is_running = false;
+    }
+}
+
 void app_init() {
+    event_init();
+
     app.window = window_new("pear app", 800, 600); 
     app.renderer = renderer_new();
     app.is_running = false;
+
+    event_subscribe(app_on_event, NULL);
 
     stm_setup();
     app.last_time = stm_now();
@@ -36,8 +47,6 @@ void app_run() {
         window_swap_buffers(app.window);
 
         node_update(app.root, app.dt);
-
-        app.is_running = !window_should_close(app.window);
     }
 
     app_delete();

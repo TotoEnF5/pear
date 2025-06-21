@@ -83,5 +83,6 @@
 
 ARRAY_DECL(u32, u32);
 ARRAY_DECL(f32, f32);
+ARRAY_DECL(void*, ptr);
 
 #endif

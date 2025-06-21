@@ -1,4 +1,5 @@
 #include "renderer.h"
+#include "event.h"
 #include "array.h"
 #include "node.h"
 #include "nodes/model.h"
@@ -19,10 +20,31 @@
 typedef struct renderer_t {
     sg_shader shader;
     sg_pipeline pipeline;
+    sg_swapchain swapchain;
     model_t* current_model;
 
     mat4 view_proj;
 } renderer_t;
+
+static void renderer_build_view_proj(renderer_t* self, u32 width, u32 height) {
+    mat4 projection = GLM_MAT4_IDENTITY_INIT;
+    mat4 view = GLM_MAT4_IDENTITY_INIT;
+    mat4 view_proj = GLM_MAT4_IDENTITY_INIT;
+    glm_perspective(glm_rad(45.0f), (f32)width / (f32)height, 0.1f, 100.0f, projection);
+    glm_lookat((vec3){ 0.0f, 1.5f, 6.0f }, (vec3){ 0.0f, 0.0f, 0.0f }, (vec3){ 0.0f, 1.0f, 0.0f }, view);
+    glm_mat4_mul(projection, view, self->view_proj);
+}
+
+static void renderer_on_event(event_type_t type, void* event, void* user_data) {
+    renderer_t* self = (renderer_t*)user_data;
+
+    if (type == EVENT_TYPE_WINDOW_RESIZED) {
+        window_resized_event_t* e = (window_resized_event_t*)event;
+        renderer_build_view_proj(self, e->width, e->height);
+        self->swapchain.width = e->width;
+        self->swapchain.height = e->height;
+    }
+}
 
 renderer_t* renderer_new(void) {
     sg_setup(&(sg_desc){
@@ -38,12 +60,15 @@ renderer_t* renderer_new(void) {
     PEAR_ASSERT(sg_isvalid(), "failed to initialize sokol!");
 
     renderer_t* self = PEAR_ALLOC(renderer_t);
-    mat4 projection = GLM_MAT4_IDENTITY_INIT;
-    mat4 view = GLM_MAT4_IDENTITY_INIT;
-    mat4 view_proj = GLM_MAT4_IDENTITY_INIT;
-    glm_perspective(glm_rad(45.0f), 800.0f / 600.0f, 0.1f, 100.0f, projection);
-    glm_lookat((vec3){ 0.0f, 1.5f, 6.0f }, (vec3){ 0.0f, 0.0f, 0.0f }, (vec3){ 0.0f, 1.0f, 0.0f }, view);
-    glm_mat4_mul(projection, view, self->view_proj);
+    renderer_build_view_proj(self, 800, 600);
+    self->swapchain = (sg_swapchain){
+        .width = 800,
+        .height = 600,
+        .sample_count = 1,
+        .color_format = SG_PIXELFORMAT_RGBA8,
+        .depth_format = SG_PIXELFORMAT_DEPTH_STENCIL,
+        .gl = { .framebuffer = 0 }
+    };
 
     self->shader = sg_make_shader(shader_shader_desc(sg_query_backend()));
 
@@ -63,6 +88,8 @@ renderer_t* renderer_new(void) {
             }
         }
     });
+
+    event_subscribe(renderer_on_event, self);
 
     return self;
 }
@@ -133,14 +160,7 @@ void renderer_render_node(renderer_t* self, node_t* node) {
     self->current_model = NULL;
 
     sg_begin_pass(&(sg_pass){
-        .swapchain = {
-            .width = 800,
-            .height = 600,
-            .sample_count = 1,
-            .color_format = SG_PIXELFORMAT_RGBA8,
-            .depth_format = SG_PIXELFORMAT_DEPTH_STENCIL,
-            .gl = { .framebuffer = 0 }
-        }
+        .swapchain = self->swapchain
     });
     sg_apply_pipeline(self->pipeline);
 
