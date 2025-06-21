@@ -10,6 +10,8 @@ typedef struct app_t {
     renderer_t* renderer;
     node_t* root;
     bool is_running;
+    u64 last_time;
+    f64 dt;
 } app_t;
 
 void app_init();

@@ -36,6 +36,7 @@ typedef enum node_type_t {
     NODE_TYPE_SCALE,
     NODE_TYPE_MODEL,
     NODE_TYPE_MESH,
+    NODE_TYPE_SCRIPT,
 } node_type_t;
 
 typedef struct node_t node_t;
@@ -61,6 +62,9 @@ typedef struct node_t {
 #define node_child(self, typename, name, ...) NODE_NEW_FUNC_NAME(typename)((node_t*)(self), (name), ##__VA_ARGS__)
 node_t* node_root(const char* name);
 void node_delete(node_t* self);
+
+void node_update(node_t* self, f32 dt);
+node_t* node_get_sibling_by_name(node_t* self, const char* name);
 
 node_t* _node_new(size_t size, node_t* parent, node_type_t type, const char* name);
 
