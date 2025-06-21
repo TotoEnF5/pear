@@ -16,6 +16,11 @@ static void window_resize_callback(GLFWwindow* window, int width, int height) {
     event_send(EVENT_TYPE_WINDOW_RESIZED, &(window_resized_event_t){ .width = (u32)width, .height = (u32)height });
 }
 
+static void window_key_callback(GLFWwindow* window, int key, int scancode, int action, int mods) {
+    event_type_t type = action == GLFW_PRESS ? EVENT_TYPE_KEY_PRESSED : EVENT_TYPE_KEY_RELEASED;
+    event_send(type, &(key_event_t){ .key = key });
+}
+
 window_t* window_new(const char* title, u32 width, u32 height) {
     PEAR_ASSERT(glfwInit() == GLFW_TRUE, "failed to initialize glfw!");
 
@@ -32,6 +37,7 @@ window_t* window_new(const char* title, u32 width, u32 height) {
 
     glfwSetWindowCloseCallback(self->handle, window_close_callback);
     glfwSetWindowSizeCallback(self->handle, window_resize_callback);
+    glfwSetKeyCallback(self->handle, window_key_callback);
 
     return self;
 }

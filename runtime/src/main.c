@@ -1,4 +1,6 @@
 #include "app.h"
+#include "event.h"
+#include "keyboard.h"
 #include "node.h"
 #include "nodes/scale.h"
 #include "nodes/pos.h"
@@ -12,8 +14,17 @@ void f(script_t* self, f64 dt) {
     rotation->rotation[2] += 10.0f * dt;
 }
 
+void on_event(event_type_t type, void* e, void* user_data) {
+    if (type == EVENT_TYPE_KEY_PRESSED) {
+        if (((key_event_t*)e)->key == PEAR_KEY_ESCAPE) {
+            event_send(EVENT_TYPE_QUIT, NULL);
+        }
+    }
+}
+
 int main(int argc, char* argv[]) {
     app_init();
+    event_subscribe(on_event, NULL);
 
     node_t* root = node_root("root");
 

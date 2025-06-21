@@ -6,12 +6,18 @@
 typedef enum event_type_t {
     EVENT_TYPE_QUIT,
     EVENT_TYPE_WINDOW_RESIZED,
+    EVENT_TYPE_KEY_PRESSED,
+    EVENT_TYPE_KEY_RELEASED,
 } event_type_t;
 
 typedef struct window_resized_event_t {
     u32 width;
     u32 height;
 } window_resized_event_t;
+
+typedef struct key_event_t {
+    i32 key;
+} key_event_t;
 
 typedef void(*event_func_t)(event_type_t type, void* event, void* user_data);
 ARRAY_DECL(event_func_t, event_func);
