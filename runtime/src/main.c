@@ -15,11 +15,6 @@ void f(script_t* self, f64 dt) {
     rotation->rotation[1] += 10.0f * dt;
 }
 
-void camera_script(script_t* self, f64 dt) {
-    pos_t* pos = (pos_t*)node_get_sibling_by_name((node_t*)self, "pos");
-    pos->pos[2] += dt;
-}
-
 void on_event(event_type_t type, void* e, void* user_data) {
     if (type == EVENT_TYPE_KEY_PRESSED) {
         if (((key_event_t*)e)->key == PEAR_KEY_ESCAPE) {
@@ -35,10 +30,9 @@ int main(int argc, char* argv[]) {
     node_t* root = node_root("root");
 
     container_t* camera_container = node_child(root, container_t, "camera container");
-    node_child(camera_container, pos_t, "pos", 0.0f, 0.0f, -10.0f);
+    node_child(camera_container, pos_t, "pos", 0.0f, 0.0f, 10.0f);
     node_child(camera_container, rotation_t, "rotation", 0.0f, -90.0f, 0.0f);
     node_child(camera_container, camera_t, "camera");
-    // node_child(camera_container, script_t, "script", camera_script);
 
     container_t* avocado_container = node_child(root, container_t, "avocado container");
     node_child(avocado_container, pos_t, "avocado pos", -2.0f, 0.0f, 0.0f);

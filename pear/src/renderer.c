@@ -100,8 +100,13 @@ void renderer_delete(renderer_t* self) {
     pear_free(self);
 }
 
-void renderer_render_mesh(renderer_t* self, mesh_t* mesh, mat4 transform) {
+void renderer_render_mesh(renderer_t* self, mesh_t* mesh, vec3 translation, vec3 rotation, vec3 scale) {
     material_t material = material_array_get(self->current_model->materials, mesh->material_index);
+
+    mat4 transform;
+    glm_translate(transform, translation);
+    glm_euler(rotation, transform);
+    glm_scale(transform, scale);
 
     vs_uniforms_t uniforms;
     glm_mat4_copy(self->projection, (vec4*)uniforms.u_projection);
@@ -118,22 +123,15 @@ void renderer_render_mesh(renderer_t* self, mesh_t* mesh, mat4 transform) {
     sg_draw(0, mesh->num_indices, 1);
 }
 
-void renderer_handle_camera(renderer_t* self, mat4 transform) {
-    vec4 translation;
-    mat4 rotation;
-    vec3 angles;
-    vec3 scale;
-    glm_decompose(transform, translation, rotation, scale);
-    glm_euler_angles(rotation, angles);
-
+void renderer_handle_camera(renderer_t* self, vec3 translation, vec3 rotation) {
     vec3 world_up = { 0.0f, 1.0f, 0.0f };
     vec3 front;
     vec3 right;
     vec3 up;
 
-    front[0] = cos(angles[1]) * cos(angles[0]);
-    front[1] = sin(angles[0]);
-    front[2] = sin(angles[1]) * cos(angles[0]);
+    front[0] = cos(glm_rad(rotation[1])) * cos(glm_rad(rotation[0]));
+    front[1] = sin(glm_rad(rotation[0]));
+    front[2] = sin(glm_rad(rotation[1])) * cos(glm_rad(rotation[0]));
     glm_normalize(front);
 
     glm_cross(front, world_up, right);
@@ -147,45 +145,47 @@ void renderer_handle_camera(renderer_t* self, mat4 transform) {
     glm_lookat(translation, target, up, self->view);
 }
 
-void renderer_handle_node(renderer_t* self, node_t* node, mat4 transform) {
+void renderer_handle_node(renderer_t* self, node_t* node, vec3 translation, vec3 rotation, vec3 scale) {
     switch (node->type) {
     case NODE_TYPE_POS: {
         pos_t* pos = (pos_t*)node;
-        glm_translate(transform, pos->pos);
+        glm_vec3_add(pos->pos, translation, translation);
         break;
     }
     case NODE_TYPE_ROTATION: {
-        rotation_t* rotation = (rotation_t*)node;
-        mat4 rotation_matrix;
-        glm_euler(rotation->rotation, rotation_matrix);
-        glm_mat4_mul(transform, rotation_matrix, transform);
+        rotation_t* r = (rotation_t*)node;
+        glm_vec3_add(r->rotation, rotation, rotation);
         break;
     }
     case NODE_TYPE_SCALE: {
-        scale_t* scale = (scale_t*)node;
-        glm_scale(transform, scale->scale);
+        scale_t* s = (scale_t*)node;
+        glm_vec3_mul(s->scale, scale, scale);
         break;
     }
     case NODE_TYPE_MODEL:
         self->current_model = (model_t*)node;
         break;
     case NODE_TYPE_MESH:
-        renderer_render_mesh(self, (mesh_t*)node, transform);
+        renderer_render_mesh(self, (mesh_t*)node, translation, rotation, scale);
         break;
     case NODE_TYPE_CAMERA:
-        renderer_handle_camera(self, transform);
+        renderer_handle_camera(self, translation, rotation);
         break;
     default:
         break;
     }
 
-    mat4 local_transform;
-    glm_mat4_copy(transform, local_transform);
+    vec3 local_translation;
+    vec3 local_rotation;
+    vec3 local_scale;
+    glm_vec3_copy(translation, local_translation);
+    glm_vec3_copy(rotation, local_rotation);
+    glm_vec3_copy(scale, local_scale);
 
     node_t* child;
     u32 i;
     ARRAY_FOREACH(node->children, child, i) {
-        renderer_handle_node(self, child, local_transform);
+        renderer_handle_node(self, child, local_translation, local_rotation, local_scale);
     }
 }
 
@@ -198,7 +198,7 @@ void renderer_render_node(renderer_t* self, node_t* node) {
     sg_apply_pipeline(self->pipeline);
 
     mat4 transform = GLM_MAT4_IDENTITY_INIT;
-    renderer_handle_node(self, node, transform);
+    renderer_handle_node(self, node, GLM_VEC3_ZERO, GLM_VEC3_ZERO, GLM_VEC3_ONE);
 
     sg_end_pass();
     sg_commit();
